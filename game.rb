@@ -2,6 +2,7 @@ require_relative 'piece'
 require_relative 'board'
 require_relative 'player'
 require 'byebug'
+require 'colorize'
 
 class Game
   attr_reader :board, :player1, :player2
@@ -15,6 +16,18 @@ class Game
   end
 end
 
-if __FILE__ != $PROGRAM_NAME
-  # game = Game.new
+
+
+
+# var = "\u2654"
+# puts var.encode('utf-8')
+
+if __FILE__ == $PROGRAM_NAME
+  game = Game.new
+  board1 = game.board
+  board2 = board1.deep_dup
+  board1.move([0,1], [2,2])
+  # p board1[[0,4]].moves
+  puts board1.render
+
 end

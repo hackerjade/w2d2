@@ -1,4 +1,4 @@
-# Chess
+
 
 class Piece
   attr_reader :color, :pos
@@ -11,8 +11,17 @@ class Piece
     raise NotImplementedError.new
   end
 
-  def moves
+  def valid_moves(potential_moves) #Causes a bug
+    potential_moves.reject { |move| move_into_check?(move) }
+  end
 
+  def move_into_check?(pos)
+    board_dup = @board.deep_dup
+    board_dup.move!(@pos, pos).in_check?(@color) # TA: make #move actually chainable
+  end
+
+  def display
+    "\u2659"
   end
 
   def inspect
@@ -20,35 +29,55 @@ class Piece
   end
 
   def is_blocked?(pos)
-    @board.occupied?(pos) && self.color == @board[pos].color
+    @board[pos] == nil ? false : @board.occupied?(pos) && self.color == @board[pos].color
+  end
+
+  def dup(dup_board)
+    self.class.new(dup_board, @pos.dup, @color) #@moved)
   end
 
 end
 
 
 class Pawn < Piece
+
+  def move_dirs
+    [
+    [1,0],
+    [-1,0]
+    ]
+  end
+
+  def display
+    "\u2659" #white
+  end
+
 end
 
 class SlidingPiece < Piece
 
   def moves
-    valid_moves = []
+    potential_moves = []
 
     move_dirs.each do |direction|
       dx,dy = direction
       new_position = [@pos[0] + dx, @pos[1] + dy]
 
-      until is_blocked?(new_position) || !@board.on_board?(new_position)
-        if is_opponent_piece?(new_position)
-          valid_moves << new_position
-          break
+      if @board.on_board?(new_position)
+        if is_blocked?(new_position)
+          #do nothing
+        else
+        # until is_blocked?(new_position) || !@board.on_board?(new_position)
+          if is_opponent_piece?(new_position)
+            potential_moves << new_position
+            break
+          end
+          potential_moves << new_position
+          new_position = [new_position[0] + dx, new_position[1] + dy]
         end
-        valid_moves << new_position
-        new_position = [new_position[0] + dx, new_position[1] + dy]
       end
     end
-
-    valid_moves
+    potential_moves
   end
 
   def is_opponent_piece?(pos)
@@ -58,6 +87,9 @@ class SlidingPiece < Piece
 end
 
 class Rook < SlidingPiece
+  def display
+    self.color == :white ? "\u2656"	: "\u265C".colorize(:black)
+  end
 
   def move_dirs
     [
@@ -68,9 +100,16 @@ class Rook < SlidingPiece
     ]
   end
 
+  def display
+    "\u2656"
+  end
+
 end
 
 class Bishop < SlidingPiece
+  def display
+    self.color == :white ? "\u2657"	: "\u265D".colorize(:black)
+  end
 
   def move_dirs
     [
@@ -83,6 +122,10 @@ class Bishop < SlidingPiece
 end
 
 class Queen < SlidingPiece
+  def display
+    self.color == :white ? "\u2655"	: "\u265B".colorize(:black)
+  end
+
   def move_dirs
     [
     [-1, -1],
@@ -97,23 +140,32 @@ class Queen < SlidingPiece
   end
 end
 
-
 class SteppingPiece < Piece
   def moves
-    valid_moves = []
+    potential_moves = []
 
     move_dirs.each do |direction|
       dx,dy = direction
       new_position = [@pos[0] + dx, @pos[1] + dy]
-      next if is_blocked?(new_position) || !@board.on_board?(new_position)
-      valid_moves << new_position
+      if @board.on_board?(new_position)
+        if is_blocked?(new_position)
+          #do nothing
+        else
+        # next if is_blocked?(new_position) || !@board.on_board?(new_position)
+          potential_moves << new_position
+        end
+      end
     end
 
-    valid_moves
+  potential_moves
   end
 end
 
 class Knight < SteppingPiece
+  def display
+    self.color == :white ? "\u2658"	: "\u265E".colorize(:black)
+  end
+
   def move_dirs
     [
     [-2, -1],
@@ -129,6 +181,10 @@ class Knight < SteppingPiece
 end
 
 class King < SteppingPiece
+  def display
+    self.color == :white ? "\u2654"	: "\u265A".colorize(:black)
+  end
+
   def move_dirs
     [
     [-1, -1],
@@ -142,6 +198,8 @@ class King < SteppingPiece
     ]
   end
 end
+
+
 
 # + Piece
 #     + @color
