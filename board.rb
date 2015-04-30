@@ -1,19 +1,27 @@
 class Board
-  PIECES = [Rook, Knight,Bishop,King,Queen,Bishop,Knight,Rook]
+  attr_accessor :cursor
 
+  PIECES = [ Rook, Knight, Bishop, King, Queen, Bishop, Knight, Rook ]
 
   def initialize(set_up = true)
     @grid = Array.new(8) {Array.new(8) }
+    @cursor = [0,4]
     set_piece_positions if set_up
   end
 
+  def move_cursor(direction)
+    dx, dy = direction
+    new_position = [@cursor[0] + dx, @cursor[1] + dy]
+    @cursor = new_position if on_board?(new_position)
+  end
+
   def on_board?(pos)
-    byebug if pos.nil?
     pos[0].between?(0, 7) && pos[1].between?(0, 7)
   end
 
   def in_check?(color)
     king_piece = king(color)
+    other_pieces = pieces(color)
     other_pieces = color == :white ? pieces(:black) : pieces(:white)
 
     other_pieces.each do |other_piece|
@@ -25,7 +33,9 @@ class Board
   end
 
   def checkmate?(color)
-    in_check?(color) && pieces(color).all?{|piece| valid_moves(self[piece].moves).nil?}
+    in_check?(color) && pieces(color).all? do |piece|
+      piece.valid_moves(piece.moves).empty?
+    end
   end
 
   def pieces(color)
@@ -38,14 +48,20 @@ class Board
   end
 
   def move(start_pos, end_pos)
-    raise "Invalid move." if self[start_pos] == nil
+    raise "No position specificed." if start_pos == nil || end_pos == nil
+    raise "No piece is there." if self[start_pos] == nil
     total_moves = self[start_pos].moves
-    valid_moves = self[start_pos].valid_moves(total_moves)
+    valids = self[start_pos].valid_moves(total_moves)
 
-    raise "Invalid move." unless valid_moves.include?(end_pos)
+    raise "Invalid move." unless valids.include?(end_pos)
     start_row, start_col = start_pos
     end_row, end_col = end_pos
-    self[start_row,start_col],self[end_row,end_col] = nil, self[start_pos]
+    start_piece = self[start_pos]
+    start_piece.pos = end_pos
+    start_piece.moved = true
+    self[end_row, end_col] = start_piece
+    self[start_row,start_col] = nil
+
 
     self
   end
@@ -65,7 +81,7 @@ class Board
         if row == 0
           self[row,col] = PIECES[col].new(self,[row,col],:white,false)
         elsif row == 7
-          self[row,col] = PIECES.reverse[col].new(self,[row,col],:black,false)
+          self[row,col] = PIECES[col].new(self,[row,col],:black,false)
         # elsif row == 1
         #   self[row,col] = Pawn.new(self,[row,col],:white,false)
         # else
@@ -75,10 +91,12 @@ class Board
     end
   end
 
-  def render
+  def render(p_color)
     (0..7).map do |row|
       (0..7).map do |col|
-        if row % 2 == 0 && col % 2 == 0 || row % 2 != 0 && col % 2 != 0
+        if [row, col] == @cursor
+          color = p_color
+        elsif row % 2 == 0 && col % 2 == 0 || row % 2 != 0 && col % 2 != 0
           color = :light_yellow
         else
           color = :light_green
@@ -94,7 +112,6 @@ class Board
 
   def deep_dup
     new_board = Board.new(false)
-
     (0..7).each do |row|
       (0..7).each do |col|
         next if @grid[row][col] == nil
@@ -105,15 +122,13 @@ class Board
     new_board
   end
 
-
   def occupied?(pos)
-    # byebug
     !self[pos].nil?
   end
 
   def [](pos)
     row,col = pos
-    byebug if @grid[row].nil?
+    byebug if pos.nil?
     @grid[row][col]
   end
 
@@ -122,13 +137,3 @@ class Board
     @grid[row][col] = value
   end
 end
-
-
-
-
-#   + occupied?(pos)
-#   + piece_at(pos)
-#   + checkmate?
-#   + check?
-#   + `#deep_dup`
-#

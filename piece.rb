@@ -1,7 +1,7 @@
 
 
 class Piece
-  attr_reader :color, :pos
+  attr_accessor :color, :pos, :moved
 
   def initialize(board, pos, color, moved = false)
     @board, @pos, @color, @moved = board, pos, color, moved
@@ -17,7 +17,7 @@ class Piece
 
   def move_into_check?(pos)
     board_dup = @board.deep_dup
-    board_dup.move!(@pos, pos).in_check?(@color) # TA: make #move actually chainable
+    board_dup.move!(@pos, pos).in_check?(@color)
   end
 
   def display
@@ -29,11 +29,13 @@ class Piece
   end
 
   def is_blocked?(pos)
-    @board[pos] == nil ? false : @board.occupied?(pos) && self.color == @board[pos].color
+    if @board.on_board?(pos)
+      @board[pos] == nil ? false : @board.occupied?(pos) && self.color == @board[pos].color
+    end
   end
 
   def dup(dup_board)
-    self.class.new(dup_board, @pos.dup, @color) #@moved)
+    self.class.new(dup_board, @pos.dup, @color, @moved)
   end
 
 end
@@ -62,19 +64,14 @@ class SlidingPiece < Piece
     move_dirs.each do |direction|
       dx,dy = direction
       new_position = [@pos[0] + dx, @pos[1] + dy]
-
-      if @board.on_board?(new_position)
-        if is_blocked?(new_position)
-          #do nothing
-        else
-        # until is_blocked?(new_position) || !@board.on_board?(new_position)
-          if is_opponent_piece?(new_position)
-            potential_moves << new_position
-            break
-          end
+      # byebug if @pos == [0, 2]
+      until is_blocked?(new_position) || !@board.on_board?(new_position)
+        if is_opponent_piece?(new_position)
           potential_moves << new_position
-          new_position = [new_position[0] + dx, new_position[1] + dy]
+          break
         end
+        potential_moves << new_position
+        new_position = [new_position[0] + dx, new_position[1] + dy]
       end
     end
     potential_moves
@@ -88,7 +85,7 @@ end
 
 class Rook < SlidingPiece
   def display
-    self.color == :white ? "\u2656"	: "\u265C".colorize(:black)
+    self.color == :white ? "\u2656" : "\u265C".colorize(:black)
   end
 
   def move_dirs
@@ -98,10 +95,6 @@ class Rook < SlidingPiece
     [-1, 0],
     [0, -1]
     ]
-  end
-
-  def display
-    "\u2656"
   end
 
 end
